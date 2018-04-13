@@ -1,0 +1,10 @@
+apply plugin: 'java'
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+sourceCompatibility = project.libComplieJavaVersion
+targetCompatibility = project.libComplieJavaVersion
+
+apply from:file("../upload.gradle")

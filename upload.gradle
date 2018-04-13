@@ -1,0 +1,27 @@
+apply plugin: 'com.novoda.bintray-release'
+//新添加
+publish {
+    Properties properties = new Properties()
+    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+    userOrg = properties.getProperty('btUserName') //在https://bintray.com上注册的用户名
+    groupId = properties.getProperty('btGroupId') //jCenter上的路径
+    artifactId = genModuleId(project.name) //要上传的library名称（和二、4中的package相同）
+    publishVersion = '0.01' //library的版本号
+    desc = 'A Router library for android' //library的简单描述
+    website = '' //library的开源地址，例如在github上的地址
+}
+
+String genModuleId(String moduleName) {
+    char[] newChars = moduleName.toLowerCase().toCharArray()
+    char[] oldChars = moduleName.toCharArray()
+    StringBuilder sb = new StringBuilder()
+    for (int i = 0; i < oldChars.length; i++) {
+
+        if (i != 0 && i != oldChars.length - 1 && newChars[i] != oldChars[i]) {
+            sb.append("-")
+        }
+        sb.append(newChars[i])
+    }
+    return sb.toString()
+}
