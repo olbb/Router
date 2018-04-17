@@ -13,4 +13,6 @@ public class Constant {
     public static final String WARNING_TIPS = "请不要改变此文件";
     public static final String METHOD_LOAD_INTO = "loadInto";
 
+    public static final String ROUTE_ROOT_PAKCAGE = "com.olbb.router";
+
 }

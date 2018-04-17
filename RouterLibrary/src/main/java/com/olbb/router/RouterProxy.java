@@ -11,9 +11,36 @@ public class RouterProxy {
 
     private Map<String, RouteMeta> routeMetaMap = new HashMap<>();
 
-    public RouterProxy() {
+    private static RouterProxy INSTANCE = null;
 
+    public static RouterProxy getInstance() {
+        if (INSTANCE == null) {
+            synchronized (RouterProxy.class) {
+                INSTANCE = new RouterProxy();
+            }
+        }
+        return INSTANCE;
     }
+
+
+    RouterProxy() {
+//        long temp = System.currentTimeMillis();
+//        try {
+//            initGroups();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        System.out.println("耗时:" + (System.currentTimeMillis() - temp));
+    }
+
+//    private void initGroups() throws Exception {
+//        List<Class> classes = ClassUtils.getFileNameByPackageName(IRouteGroup.class);
+//        for (Class c : classes) {
+//            IRouteGroup iRouteGroup = (IRouteGroup) c.newInstance();
+//            init(iRouteGroup);
+//        }
+//        System.out.println("有" + classes + "类");
+//    }
 
     private RouteMeta getMeta(String str) {
         if (routeMetaMap.containsKey(str)) {

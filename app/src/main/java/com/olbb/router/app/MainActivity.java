@@ -34,4 +34,9 @@ public class MainActivity extends AppCompatActivity {
         transaction.commitAllowingStateLoss();
 
     }
+
+    public void onClick3(View view) {
+        Intent intent = ((MApplication)getApplication()).getProxy().getActivityIntent(this, "sub_activity");
+        startActivity(intent);
+    }
 }

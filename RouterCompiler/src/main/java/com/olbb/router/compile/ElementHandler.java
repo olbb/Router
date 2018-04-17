@@ -3,6 +3,7 @@ package com.olbb.router.compile;
 import com.olbb.router.RouteMeta;
 import com.olbb.router.RouteType;
 import com.olbb.router.annotations.Router;
+import com.olbb.router.annotations.RouterProvider;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
@@ -16,14 +17,16 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic;
 
 import static com.olbb.router.Constant.ACTIVITY;
 import static com.olbb.router.Constant.FRAGMENT;
@@ -34,15 +37,27 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 
 public class ElementHandler {
 
+    private static final String TAG = "Router:";
     Filer filer;
     Elements elements;
     Types types;
+    private Messager messager;
 
-    public ElementHandler(Filer filer, Elements elementUtils, Types typeUtils) {
-        this.filer = filer;
-        this.elements = elementUtils;
-        types = typeUtils;
+    public ElementHandler(ProcessingEnvironment environment) {
+        filer = environment.getFiler();
+        elements = environment.getElementUtils();
+        types = environment.getTypeUtils();
+        messager = environment.getMessager();
     }
+
+    public void clean() {
+        groupFileName = null;
+        packageName = null;
+        routeMetas = null;
+    }
+
+    String groupFileName = null,packageName = null;
+    List<RouteMeta> routeMetas = new ArrayList<>();
 
     /**
      * 表示一个程序元素，比如包、类或者方法，有如下几种子接口：
@@ -57,9 +72,11 @@ public class ElementHandler {
         TypeMirror type_Activity = elements.getTypeElement(ACTIVITY).asType();
         TypeMirror fragmentTm = elements.getTypeElement(FRAGMENT).asType();
         TypeMirror fragmentTmV4 = elements.getTypeElement(FRAGMENT_V4).asType();
-        PackageElement packageElement = null;
-        List<RouteMeta> routeMetas = new ArrayList<>();
-        for (Element element : roundEnvironment.getElementsAnnotatedWith(Router.class)) {
+
+        Set<? extends Element> packInfo = roundEnvironment.getElementsAnnotatedWith(RouterProvider.class);
+
+        Set<? extends Element> routers = roundEnvironment.getElementsAnnotatedWith(Router.class);
+        for (Element element : routers) {
             ElementKind kind = element.getKind();
 //            System.out.println("kind is :" + kind);
 //            System.out.println("element is :" + element);
@@ -69,9 +86,6 @@ public class ElementHandler {
                 TypeMirror tm = typeElement.asType();
                 Router router = typeElement.getAnnotation(Router.class);
                 System.out.println("annotation is:" + router);
-                if (packageElement == null) {
-                    packageElement = elements.getPackageOf(typeElement);
-                }
                 RouteMeta routeMeta = null;
                 if (types.isSubtype(tm, type_Activity)) {                 // Activity
                     routeMeta = new RouteMeta(router, element, RouteType.ACTIVITY, null);
@@ -85,41 +99,53 @@ public class ElementHandler {
             }
         }
 
-        try {
-            // Generate groups
-            if (packageElement == null) return;
-            String groupFileName = "EBookRoute";
-            TypeElement type_IRouteGroup = elements.getTypeElement("com.olbb.router.IRouteGroup");
-            ParameterSpec groupParamSpec = ParameterSpec.builder(inputMapTypeOfGroup, "atlas").build();
-            MethodSpec.Builder loadIntoMethodOfGroupBuilder = MethodSpec.methodBuilder(METHOD_LOAD_INTO)
-                    .addAnnotation(Override.class)
-                    .addModifiers(PUBLIC)
-                    .addParameter(groupParamSpec);
-            ClassName routeMetaCn = ClassName.get(RouteMeta.class);
-            ClassName routeTypeCn = ClassName.get(RouteType.class);
-
-            for (RouteMeta routeMeta : routeMetas) {
-                loadIntoMethodOfGroupBuilder.addStatement(
-                        "atlas.put($S, $T.build($T." + routeMeta.getType() + ", $T.class, $S, $S, " + null + ", " + routeMeta.getPriority() + ", " + routeMeta.getExtra() + "))",
-                        routeMeta.getPath(),
-                        routeMetaCn,
-                        routeTypeCn,
-                        ClassName.get((TypeElement) routeMeta.getRawType()),
-                        routeMeta.getPath().toLowerCase(),
-                        routeMeta.getGroup().toLowerCase());
-            }
-
-            JavaFile.builder(packageElement.getQualifiedName().toString(),
-                    TypeSpec.classBuilder(groupFileName)
-                            .addJavadoc(WARNING_TIPS)
-                            .addSuperinterface(ClassName.get(type_IRouteGroup))
-                            .addModifiers(PUBLIC)
-                            .addMethod(loadIntoMethodOfGroupBuilder.build())
-                            .build()
-            ).build().writeTo(filer);
-        } catch (Exception e) {
-            e.printStackTrace();
+        for (Element element : packInfo) {
+            packageName = elements.getPackageOf(element).getQualifiedName().toString();
+            groupFileName = element.getSimpleName().toString() + "Provider";
+            break;
         }
+        if (true) {
+            if (roundEnvironment.processingOver() && (groupFileName == null || packageName == null)) {
+                printError("You need to add a class that is annotated by @RouterProvider to your module!");
+                return;
+            }
+            try {
+                // Generate groups
+                System.out.println("groupFileName is:" + groupFileName);
+
+                TypeElement type_IRouteGroup = elements.getTypeElement("com.olbb.router.IRouteGroup");
+                ParameterSpec groupParamSpec = ParameterSpec.builder(inputMapTypeOfGroup, "atlas").build();
+                MethodSpec.Builder loadIntoMethodOfGroupBuilder = MethodSpec.methodBuilder(METHOD_LOAD_INTO)
+                        .addAnnotation(Override.class)
+                        .addModifiers(PUBLIC)
+                        .addParameter(groupParamSpec);
+                ClassName routeMetaCn = ClassName.get(RouteMeta.class);
+                ClassName routeTypeCn = ClassName.get(RouteType.class);
+
+                for (RouteMeta routeMeta : routeMetas) {
+                    loadIntoMethodOfGroupBuilder.addStatement(
+                            "atlas.put($S, $T.build($T." + routeMeta.getType() + ", $T.class, $S, $S, " + null + ", " + routeMeta.getPriority() + ", " + routeMeta.getExtra() + "))",
+                            routeMeta.getPath(),
+                            routeMetaCn,
+                            routeTypeCn,
+                            ClassName.get((TypeElement) routeMeta.getRawType()),
+                            routeMeta.getPath().toLowerCase(),
+                            routeMeta.getGroup().toLowerCase());
+                }
+                JavaFile.builder(packageName,
+                        TypeSpec.classBuilder(groupFileName)
+                                .addJavadoc(WARNING_TIPS)
+                                .addSuperinterface(ClassName.get(type_IRouteGroup))
+                                .addModifiers(PUBLIC)
+                                .addMethod(loadIntoMethodOfGroupBuilder.build())
+                                .build()
+                ).build().writeTo(filer);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+
     }
 
     ParameterizedTypeName inputMapTypeOfGroup = ParameterizedTypeName.get(
@@ -130,5 +156,13 @@ public class ElementHandler {
 
     private void genSpec(List<RouteMeta> routeMetas) {
 
+    }
+
+    private void printError(String message) {
+        messager.printMessage(Diagnostic.Kind.ERROR, TAG + message);
+    }
+
+    private void printWaring(String waring) {
+        messager.printMessage(Diagnostic.Kind.WARNING, TAG + waring);
     }
 }

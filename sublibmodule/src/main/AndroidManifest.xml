@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="router.ebook.media.meizu.com.sublibmodule" >
+
+    <application>
+
+        <activity android:name=".SubModuleActivity"/>
+
+    </application>
+
+</manifest>

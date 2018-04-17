@@ -29,7 +29,7 @@ public class RouterProcessor extends AbstractProcessor{
     @Override
     public synchronized void init(ProcessingEnvironment processingEnvironment) {
         super.init(processingEnvironment);
-        elementHandler = new ElementHandler(processingEnvironment.getFiler(), processingEnvironment.getElementUtils(), processingEnvironment.getTypeUtils());
+        elementHandler = new ElementHandler(processingEnvironment);
     }
 
     /**
@@ -62,6 +62,9 @@ public class RouterProcessor extends AbstractProcessor{
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
 //        System.out.println("收到元素:" + set);
         elementHandler.handleElement(set, roundEnvironment);
+        if (roundEnvironment.processingOver()) {
+            elementHandler.clean();
+        }
         return true;
     }
 }
