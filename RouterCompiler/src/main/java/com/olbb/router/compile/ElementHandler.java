@@ -104,7 +104,7 @@ public class ElementHandler {
             groupFileName = element.getSimpleName().toString() + "Provider";
             break;
         }
-        if (true) {
+        if (packInfo.size() > 0) {
             if (roundEnvironment.processingOver() && (groupFileName == null || packageName == null)) {
                 printError("You need to add a class that is annotated by @RouterProvider to your module!");
                 return;
