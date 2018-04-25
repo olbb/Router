@@ -7,7 +7,7 @@ publish {
     userOrg = properties.getProperty('btUserName') //在https://bintray.com上注册的用户名
     groupId = properties.getProperty('btGroupId') //jCenter上的路径
     artifactId = genModuleId(project.name) //要上传的library名称（和二、4中的package相同）
-    publishVersion = '0.0.2' //library的版本号
+    publishVersion = '0.0.3' //library的版本号
     desc = 'A Router library for android' //library的简单描述
     website = '' //library的开源地址，例如在github上的地址
 }
