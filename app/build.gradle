@@ -26,6 +26,8 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
 
     implementation project(':sublibmodule')
-    implementation 'com.olbb:router-library:0.0.2'
-    annotationProcessor 'com.olbb:router-compiler:0.0.2'
+//    implementation 'com.olbb:router-library:0.0.2'
+//    annotationProcessor 'com.olbb:router-compiler:0.0.2'
+    implementation project(':RouterLibrary')
+    annotationProcessor project(':RouterCompiler')
 }
